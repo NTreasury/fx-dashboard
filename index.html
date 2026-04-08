@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>최초고시환율 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --sage:         #b8d4b0;
+    --sage-light:   #e8f3e4;
+    --sage-pale:    #f2f8f0;
+    --sage-dark:    #4a7a52;
+    --mint:         #3ec9a7;
+    --mint-light:   #e6f8f3;
+    --mint-dark:    #1fa882;
+    --band-bg:      rgba(168,210,185,0.30);
+    --band-border:  rgba(100,185,155,0.45);
+    --up:           #e07c72;
+    --up-light:     #fcecea;
+    --up-border:    #f0bab5;
+    --dn:           #7aaee0;
+    --dn-light:     #eaf2fc;
+    --dn-border:    #b8d4f5;
+    --rate-color:   #6b7280;
+    --white:        #ffffff;
+    --border:       #e0ece0;
+    --border2:      #c4dcc4;
+    --text:         #2d3a2d;
+    --text2:        #4a7a52;
+    --text3:        #90b898;
+    --shadow:       0 2px 10px rgba(120,190,150,0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #ffffff;
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  .topbar {
+    background: var(--white);
+    border-bottom: 2px solid var(--sage);
+    padding: 0 28px; height: 54px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100; gap: 12px;
+    box-shadow: 0 2px 8px rgba(120,190,150,0.08);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 30px; height: 30px; background: var(--mint);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px; font-weight: 700;
+  }
+  .logo-text { font-size: 15px; font-weight: 700; color: var(--text); }
+  .logo-sub  { font-size: 10px; color: var(--text3); margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  select {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12px; padding: 5px 10px;
+    background: var(--white); border: 1px solid var(--border2);
+    border-radius: 6px; color: var(--text2); cursor: pointer; outline: none;
+  }
+  select:focus { border-color: var(--mint); }
+  .updated {
+    font-size: 11px; color: var(--text3); padding: 4px 12px;
+    background: var(--mint-light); border-radius: 20px; white-space: nowrap;
+  }
+  .updated.ok { color: var(--mint-dark); font-weight: 500; }
+
+  .main { padding: 20px 28px; max-width: 1360px; margin: 0 auto; }
+
+  .alert { border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 12px; border: 1px solid; }
+  .alert-warn { background: #fffde7; border-color: #ffe082; color: #7a5c00; }
+  .alert-err  { background: #fff0f0; border-color: #ffcdd2; color: #b71c1c; }
+  .alert b { font-weight: 600; display: block; margin-bottom: 3px; }
+  .alert pre { white-space: pre-wrap; font-size: 11px; opacity: 0.85; margin-top: 4px; line-height: 1.6; font-family: monospace; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 14px;
+  }
+  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  @media (max-width: 580px) { .grid { grid-template-columns: 1fr; } .main { padding: 14px; } .topbar { padding: 0 14px; } }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s, border-color 0.2s;
+    animation: fadeUp 0.35s ease both;
+  }
+  .card:hover { box-shadow: 0 6px 22px rgba(120,190,150,0.15); border-color: var(--sage); }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(6px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .card:nth-child(1){animation-delay:.04s}
+  .card:nth-child(2){animation-delay:.08s}
+  .card:nth-child(3){animation-delay:.12s}
+  .card:nth-child(4){animation-delay:.16s}
+  .card:nth-child(5){animation-delay:.20s}
+  .card:nth-child(6){animation-delay:.24s}
+
+  .card-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; margin-bottom: 14px;
+  }
+  .pair-name { font-size: 14px; font-weight: 700; color: var(--mint-dark); letter-spacing: 0.3px; }
+  .pair-sub  { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+  .rate-wrap { text-align: right; }
+  .rate { font-size: 24px; font-weight: 700; color: var(--rate-color); letter-spacing: -0.5px; line-height: 1.1; }
+  .chg     { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .chg.up  { color: var(--up); }
+  .chg.dn  { color: var(--dn); }
+
+  .bands {
+    display: grid; grid-template-columns: repeat(3,1fr);
+    gap: 6px; margin-bottom: 14px;
+  }
+  .band { border-radius: 9px; padding: 8px 9px; border: 1px solid; }
+  .band-lbl { font-size: 9px; color: var(--text3); margin-bottom: 3px; letter-spacing: 0.3px; }
+  .band-val { font-size: 12px; font-weight: 600; }
+  .band.upper { background: var(--up-light);   border-color: var(--up-border); }
+  .band.upper .band-val { color: var(--up); }
+  .band.ma    { background: var(--mint-light); border-color: #a8e8d8; }
+  .band.ma    .band-val { color: var(--mint-dark); }
+  .band.lower { background: var(--dn-light);   border-color: var(--dn-border); }
+  .band.lower .band-val { color: var(--dn); }
+
+  .chart-wrap { position: relative; width: 100%; height: 120px; }
+
+  .leg-row { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text3); }
+  .leg-line { width: 16px; height: 2px; border-radius: 1px; }
+  .leg-fill { width: 16px; height: 8px; border-radius: 3px; background: var(--band-bg); border: 1px solid var(--band-border); }
+
+  .footer {
+    text-align: center; font-size: 11px; color: var(--text3);
+    padding: 28px; line-height: 2;
+    border-top: 1px solid var(--border); margin-top: 8px;
+  }
+  .footer a { color: var(--text3); }
+  .footer a:hover { color: var(--mint-dark); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">FX</div>
+    <div>
+      <div class="logo-text">최초고시환율 대시보드</div>
+      <div class="logo-sub">하나은행 · 이동평균 · 표준편차 밴드</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <select id="sigma-sel">
+      <option value="252_1" selected>1년 ±1σ</option>
+      <option value="504_2">2년 ±2σ</option>
+    </select>
+    <select id="range-sel">
+      <option value="60">3개월</option>
+      <option value="120">6개월</option>
+      <option value="252" selected>1년</option>
+      <option value="0">전체</option>
+    </select>
+    <div class="updated" id="updated">로딩 중...</div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="alerts"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="footer">
+  출처 · <a href="https://www.koreaexim.go.kr" target="_blank">한국수출입은행 환율정보 API</a> · 하나은행 최초고시 기준<br>
+  USD/JPY · EUR/JPY · EUR/USD 는 KRW 기준 역산값 · fetch_fx.py 매일 자동수집
+</div>
+
+<script>
+const PAIRS = ['USD/KRW','EUR/KRW','JPY/KRW','USD/JPY','EUR/JPY','EUR/USD'];
+const DEC   = {'USD/KRW':2,'EUR/KRW':2,'JPY/KRW':4,'USD/JPY':3,'EUR/JPY':3,'EUR/USD':5};
+const SUBS  = {
+  'USD/KRW':'최초고시환율 기준',
+  'EUR/KRW':'최초고시환율 기준',
+  'JPY/KRW':'최초고시환율 기준 (1엔)',
+  'USD/JPY':'최초고시환율 기준',
+  'EUR/JPY':'최초고시환율 기준',
+  'EUR/USD':'최초고시환율 기준',
+};
+
+let rawData = {};
+let charts  = {};
+
+// 천단위 구분 포맷 함수
+function fmtRate(value, dec) {
+  return value.toLocaleString('ko-KR', {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec
+  });
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('fx_data.json?_=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.rates || Object.keys(json.rates).length === 0) {
+      showAlert('warn','fx_data.json 에 데이터가 없습니다','fetch_fx.py --backfill 을 먼저 실행해주세요.');
+      return;
+    }
+    rawData = json.rates;
+    const el = document.getElementById('updated');
+    el.textContent = (json.updated||'') + ' 업데이트';
+    el.className = 'updated ok';
+    const today    = new Date().toISOString().slice(0,10);
+    const lastDate = Object.keys(rawData).sort().pop();
+    const daysDiff = Math.floor((new Date(today)-new Date(lastDate))/86400000);
+    if (daysDiff >= 3) showAlert('warn',`마지막 데이터: ${lastDate} (${daysDiff}일 전)`,'fetch_fx.py 가 최근 실행되지 않았습니다.');
+    buildGrid();
+    renderAll();
+  } catch(e) {
+    showAlert('err','fx_data.json 로드 실패','index.html 과 fx_data.json 이 같은 폴더에 있는지 확인하세요.\n브라우저에서 직접 파일을 열면 차단됩니다 → FX대시보드열기.bat 으로 실행하세요.');
+    buildGrid();
+  }
+}
+
+function showAlert(type, title, detail) {
+  const div = document.createElement('div');
+  div.className = 'alert alert-' + type;
+  div.innerHTML = `<b>${title}</b><pre>${detail}</pre>`;
+  document.getElementById('alerts').appendChild(div);
+}
+
+function getSortedSeries(pair) {
+  return Object.entries(rawData)
+    .filter(([,v]) => v[pair] != null)
+    .sort(([a],[b]) => a.localeCompare(b))
+    .map(([date,v]) => ({ date, rate: v[pair] }));
+}
+
+function calcStats(series, w, sigma) {
+  return series.map((d,i) => {
+    const sl = series.slice(Math.max(0,i-w+1),i+1).map(x=>x.rate);
+    const ma = sl.reduce((a,b)=>a+b,0)/sl.length;
+    const std = Math.sqrt(sl.reduce((a,b)=>a+(b-ma)**2,0)/sl.length);
+    return { ...d, ma, std, upper:ma+sigma*std, lower:ma-sigma*std };
+  });
+}
+
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  PAIRS.forEach(pair => {
+    const k = pair.replace('/','_');
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `
+      <div class="card-top">
+        <div>
+          <div class="pair-name">${pair}</div>
+          <div class="pair-sub">${SUBS[pair]}</div>
+        </div>
+        <div class="rate-wrap">
+          <div class="rate" id="r-${k}">—</div>
+          <div class="chg"  id="c-${k}">—</div>
+        </div>
+      </div>
+      <div class="bands">
+        <div class="band upper"><div class="band-lbl">상단 밴드</div><div class="band-val" id="u-${k}">—</div></div>
+        <div class="band ma">   <div class="band-lbl">이동평균</div> <div class="band-val" id="m-${k}">—</div></div>
+        <div class="band lower"><div class="band-lbl">하단 밴드</div><div class="band-val" id="l-${k}">—</div></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="cv-${k}" role="img" aria-label="${pair} 환율 차트">${pair}</canvas>
+      </div>
+      <div class="leg-row">
+        <div class="leg"><div class="leg-line" style="background:#3ec9a7"></div>환율</div>
+        <div class="leg"><div class="leg-line" style="background:#8abf98;height:1.5px"></div>이동평균</div>
+        <div class="leg"><div class="leg-fill"></div>±σ 밴드</div>
+      </div>`;
+    grid.appendChild(el);
+  });
+}
+
+function renderCard(pair) {
+  const [w, sigma] = document.getElementById('sigma-sel').value.split('_').map(Number);
+  const rangeN = parseInt(document.getElementById('range-sel').value);
+  const dec = DEC[pair];
+  const k = pair.replace('/','_');
+
+  const full  = getSortedSeries(pair);
+  if (full.length < 2) return;
+  const stats = calcStats(full, w, sigma);
+  const slice = rangeN > 0 ? stats.slice(-rangeN) : stats;
+  const last  = stats[stats.length-1];
+  const prev  = stats[stats.length-2];
+
+  // 환율 — 천단위 구분, 항상 회색
+  document.getElementById('r-'+k).textContent = fmtRate(last.rate, dec);
+
+  // 등락 — 천단위 구분 + 색상
+  const diff = last.rate - prev.rate;
+  const pct  = diff / prev.rate * 100;
+  const cEl  = document.getElementById('c-'+k);
+  const sign = diff >= 0 ? '+' : '';
+  cEl.textContent = sign + fmtRate(diff, dec) + ' (' + sign + pct.toFixed(2) + '%)';
+  cEl.className = 'chg' + (diff>0?' up':diff<0?' dn':'');
+
+  // 밴드 — 천단위 구분
+  document.getElementById('u-'+k).textContent = fmtRate(last.upper, dec);
+  document.getElementById('m-'+k).textContent = fmtRate(last.ma,    dec);
+  document.getElementById('l-'+k).textContent = fmtRate(last.lower, dec);
+
+  const ctx = document.getElementById('cv-'+k).getContext('2d');
+  if (charts[pair]) charts[pair].destroy();
+
+  charts[pair] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: slice.map(d => d.date.slice(5)),
+      datasets: [
+        { label:'상단',
+          data: slice.map(d=>d.upper?+d.upper.toFixed(dec):null),
+          borderColor:'rgba(140,190,150,0.45)',
+          borderWidth:1, borderDash:[4,3],
+          pointRadius:0, fill:'+1',
+          backgroundColor:'rgba(168,210,185,0.28)',
+          order:4 },
+        { label:'하단',
+          data: slice.map(d=>d.lower?+d.lower.toFixed(dec):null),
+          borderColor:'rgba(140,190,150,0.45)',
+          borderWidth:1, borderDash:[4,3],
+          pointRadius:0, fill:false, order:5 },
+        { label:'MA',
+          data: slice.map(d=>d.ma?+d.ma.toFixed(dec):null),
+          borderColor:'#8abf98',
+          borderWidth:1.8, pointRadius:0, fill:false, order:2 },
+        { label:'환율',
+          data: slice.map(d=>d.rate),
+          borderColor:'#3ec9a7',
+          borderWidth:2, pointRadius:0, fill:false, tension:0.2, order:1 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, animation:{duration:350},
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#fff',
+          borderColor:'#e0ece0', borderWidth:1,
+          titleColor:'#4a7a52', bodyColor:'#2d3a2d',
+          titleFont:{family:'Noto Sans KR',size:10},
+          bodyFont:{family:'Noto Sans KR',size:10},
+          callbacks:{
+            label: c => {
+              if (c.parsed.y == null) return '';
+              return ` ${c.dataset.label}: ${fmtRate(c.parsed.y, dec)}`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ ticks:{maxTicksLimit:4,font:{size:9},color:'#90b898'}, grid:{color:'rgba(140,190,150,0.08)'} },
+        y:{ ticks:{maxTicksLimit:4,font:{size:9},color:'#90b898',
+              callback: v => fmtRate(v, dec<=2?dec:2)},
+            grid:{color:'rgba(140,190,150,0.08)'} }
+      }
+    }
+  });
+}
+
+function renderAll() { PAIRS.forEach(p => renderCard(p)); }
+document.getElementById('sigma-sel').addEventListener('change', renderAll);
+document.getElementById('range-sel').addEventListener('change', renderAll);
+loadData();
+</script>
+</body>
+</html>
