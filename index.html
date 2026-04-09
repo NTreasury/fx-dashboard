@@ -135,7 +135,7 @@
   .band.lower { background: var(--dn-light);   border-color: var(--dn-border); }
   .band.lower .band-val { color: var(--dn); }
 
-  .chart-wrap { position: relative; width: 100%; height: 120px; }
+  .chart-wrap { position: relative; width: 100%; height: 150px; }
 
   .leg-row { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
   .leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text3); }
@@ -163,15 +163,15 @@
   </div>
   <div class="topbar-right">
     <select id="sigma-sel">
-      <option value="365" selected>1년</option>
-      <option value="730">2년</option>
+      <option value="365" selected>1년 ±1σ</option>
+      <option value="730">2년 ±2σ</option>
     </select>
     <select id="range-sel">
       <option value="60">3개월</option>
       <option value="120">6개월</option>
-      <option value="252" selected>1년</option>
-      <option value="2025-01-01">2025년 1월~</option>
-      <option value="0">전체</option>
+      <option value="252">1년</option>
+      <option value="2025-01-01" selected>2025년 1월~</option>
+      <option value="730">2년</option>
     </select>
     <div class="updated" id="updated">로딩 중...</div>
   </div>
@@ -256,7 +256,7 @@ function calcStats(series, w) {
     const sl = series.slice(i - w + 1, i + 1).map(x => x.rate);
     const ma  = sl.reduce((a,b) => a+b, 0) / sl.length;
     const variance = sl.reduce((a,b) => a + (b-ma)**2, 0) / sl.length;
-    const std = Math.sqrt(variance) * 2;
+    const std = Math.sqrt(variance);
     return { ...d, ma, std, upper: ma + std, lower: ma - std };
   });
 }
@@ -298,23 +298,26 @@ function buildGrid() {
 
 function renderCard(pair) {
   const w = parseInt(document.getElementById('sigma-sel').value);
-  const rangeVal = document.getElementById('range-sel').value;
-  const rangeN = isNaN(parseInt(rangeVal)) ? 0 : parseInt(rangeVal);
-  const rangeDate = isNaN(parseInt(rangeVal)) ? rangeVal : null;
-  const dec = DEC[pair];
+  const rangeN = parseInt(document.getElementById('range-sel').value) || 0;const dec = DEC[pair];
   const k = pair.replace('/','_');
 
   const full  = getSortedSeries(pair);
   if (full.length < 2) return;
   const stats = calcStats(full, w);
+  // rangeVal 재조회 (isNaN 문제 방지)
+  const _rv = document.getElementById('range-sel').value;
+  const _rn = parseInt(_rv);
+  // 전체 stats 중 ma 있는 것만
+  const validStats = stats.filter(d => d.ma !== null);
   let slice;
-  if (rangeDate) {
-    slice = stats.filter(d => d.date >= rangeDate);
-  } else if (rangeN > 0) {
-    slice = stats.slice(-rangeN);
+  if (_rv === '2025-01-01') {
+    slice = stats.filter(d => d.date >= '2025-01-01');
+  } else if (!isNaN(_rn) && _rn > 0) {
+    slice = validStats.slice(-_rn);
   } else {
-    slice = stats;
+    slice = validStats;
   }
+  if (!slice || slice.length === 0) slice = validStats;
   const last  = stats[stats.length-1];
   const prev  = stats[stats.length-2];
 
@@ -340,7 +343,7 @@ function renderCard(pair) {
   charts[pair] = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: slice.map(d => d.date.slice(5)),
+      labels: slice.map(d => d.date.slice(2)),
       datasets: [
         { label:'상단',
           data: slice.map(d=>d.upper?+d.upper.toFixed(dec):null),
