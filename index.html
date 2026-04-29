@@ -220,6 +220,11 @@ async function loadData() {
       return;
     }
     rawData = json.rates;
+     Object.values(rawData).forEach(v => {
+    if (!v['USD/JPY']) v['USD/JPY'] = v['USD/KRW'] / v['JPY/KRW'];
+    if (!v['EUR/USD']) v['EUR/USD'] = v['EUR/KRW'] / v['USD/KRW'];
+    if (!v['EUR/JPY']) v['EUR/JPY'] = v['EUR/KRW'] / v['JPY/KRW'];
+  });
     const el = document.getElementById('updated');
     el.textContent = (json.updated||'') + ' 업데이트';
     el.className = 'updated ok';
