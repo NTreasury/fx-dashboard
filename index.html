@@ -209,7 +209,26 @@ function fmtRate(value, dec) {
     maximumFractionDigits: dec
   });
 }
-
+async function setUpdatedFromGitHub() {
+    const el = document.getElementById('updated');
+    try {
+      const res = await
+  fetch('https://api.github.com/repos/NTreasury/fx-dashboard/commits?path=fx_data.json&per_page=1');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const arr = await res.json();
+      if (!arr.length) throw new Error('no commits');
+      const iso = arr[0].commit.committer.date;
+      const kst = new Date(new Date(iso).getTime() + 9*60*60*1000);
+      const p = n => String(n).padStart(2,'0');
+      const txt = `${kst.getUTCFullYear()}-${p(kst.getUTCMonth()+1)}-${p(kst.getUTCDate())}
+  ${p(kst.getUTCHours())}:${p(kst.getUTCMinutes())}`;
+      el.textContent = txt + ' 업데이트';
+      el.className = 'updated ok';
+    } catch(e) {
+      el.textContent = '업데이트 시간 조회 실패';
+      el.className = 'updated';
+    }
+  }
 async function loadData() {
   try {
     const res = await fetch('fx_data.json?_=' + Date.now());
@@ -225,9 +244,7 @@ async function loadData() {
     if (!v['EUR/USD']) v['EUR/USD'] = v['EUR/KRW'] / v['USD/KRW'];
     if (!v['EUR/JPY']) v['EUR/JPY'] = v['EUR/KRW'] / v['JPY/KRW'];
   });
-    const el = document.getElementById('updated');
-    el.textContent = (json.updated||'') + ' 업데이트';
-    el.className = 'updated ok';
+    setUpdatedFromGitHub();
     const today    = new Date().toISOString().slice(0,10);
     const lastDate = Object.keys(rawData).sort().pop();
     const daysDiff = Math.floor((new Date(today)-new Date(lastDate))/86400000);
