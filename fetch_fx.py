@@ -40,7 +40,7 @@ def fetch_rates(date_str):
             API_URL,
             params={"authkey": AUTH_KEY, "searchdate": date_str, "data": "AP01"},
             timeout=10,
-            verify=certifi.where(),
+            verify="C:\Users\USER\Desktop\회사\0. 정보\cacert.pem",
         )
         r.raise_for_status()
         data = r.json()
