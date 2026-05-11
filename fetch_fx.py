@@ -17,7 +17,7 @@ except ImportError as e:
 # ---- settings ----
 import os
 AUTH_KEY     = os.environ.get("EXIM_AUTH_KEY", "izAbe7kGpFDD4LHBX02AgeI3qCkEQT3I")
-GITHUB_TOKEN = "YOUR_TOKEN_HERE"
+GITHUB_TOKEN = "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"
 GITHUB_USER  = "NTreasury"
 GITHUB_REPO  = "fx-dashboard"
 GITHUB_FILE  = "fx_data.json"
